@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Invoice & Label Crop Tool – Amazon, Flipkart, Meesho</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Free online invoice and label cropper for Amazon, Flipkart & Meesho sellers. No login required.">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+:root{
+  --bg:#f4f6fb;
+  --card:#ffffff;
+  --border:#e5e7eb;
+  --text:#111827;
+  --primary:#2563eb;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:var(--bg);
+  color:var(--text);
+}
+
+header{
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  padding:16px;
+  text-align:center;
+}
+
+.container{
+  max-width:1000px;
+  margin:24px auto;
+  padding:20px;
+  background:#fff;
+  border-radius:16px;
+  border:1px solid var(--border);
+}
+
+.upload{
+  text-align:center;
+  border:2px dashed var(--border);
+  padding:30px;
+  border-radius:16px;
+}
+
+.upload-btn{
+  margin-top:14px;
+  padding:14px 28px;
+  border:none;
+  border-radius:999px;
+  background:linear-gradient(135deg,#2563eb,#0ea5e9);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.progress{
+  height:6px;
+  background:#e5e7eb;
+  border-radius:999px;
+  margin:12px 0;
+  overflow:hidden;
+}
+.progress span{
+  display:block;
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#2563eb,#0ea5e9);
+  transition:width .4s ease;
+}
+
+.platforms{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  margin:20px 0;
+  flex-wrap:wrap;
+}
+
+.platform{
+  padding:12px 20px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  cursor:pointer;
+  transition:.25s;
+}
+.platform.active{
+  background:var(--primary);
+  color:#fff;
+  box-shadow:0 10px 25px rgba(37,99,235,.35);
+  transform:translateY(-2px);
+}
+
+canvas{
+  width:100%;
+  margin-top:20px;
+  border-radius:12px;
+  border:1px solid var(--border);
+}
+
+.actions{
+  display:none;
+  gap:12px;
+  justify-content:center;
+  margin-top:20px;
+  flex-wrap:wrap;
+}
+
+.btn{
+  padding:12px 22px;
+  border:none;
+  border-radius:999px;
+  font-weight:700;
+  cursor:pointer;
+}
+.primary{background:#2563eb;color:#fff}
+.success{background:#16a34a;color:#fff}
+
+.ad{
+  margin:24px 0;
+  padding:20px;
+  background:#f1f5f9;
+  text-align:center;
+  border-radius:12px;
+  color:#64748b;
+}
+
+.sticky-download{
+  display:none;
+}
+
+@media(max-width:768px){
+  .sticky-download{
+    display:block;
+    position:fixed;
+    bottom:16px;
+    left:50%;
+    transform:translateX(-50%);
+    width:90%;
+    max-width:420px;
+    z-index:999;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Invoice & Label Crop Tool</h1>
+  <p>Amazon · Flipkart · Meesho — Free & No Login</p>
+</header>
+
+<div class="container">
+
+  <!-- Upload -->
+  <div class="upload">
+    <div>Upload PDF or Image</div>
+    <div class="progress"><span id="progressBar"></span></div>
+    <input type="file" id="fileInput" accept="image/*,.pdf" hidden>
+    <button class="upload-btn" onclick="fileInput.click()">Upload File</button>
+  </div>
+
+  <!-- AdSense -->
+  <div class="ad">AdSense Banner (High RPM Placement)</div>
+
+  <!-- Platforms -->
+  <div class="platforms">
+    <div class="platform" data-platform="amazon">Amazon</div>
+    <div class="platform" data-platform="flipkart">Flipkart</div>
+    <div class="platform" data-platform="meesho">Meesho</div>
+  </div>
+
+  <!-- Canvas -->
+  <canvas id="canvas"></canvas>
+
+  <!-- Actions -->
+  <div class="actions" id="actions">
+    <button class="btn primary" onclick="enableManual()">Manual Crop</button>
+    <button class="btn primary" onclick="autoCrop()">Auto Crop</button>
+  </div>
+
+  <!-- AdSense -->
+  <div class="ad">AdSense In-Content Ad</div>
+
+</div>
+
+<button class="btn success sticky-download" onclick="downloadCrop()">Download</button>
+
+<script>
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const fileInput=document.getElementById('fileInput');
+const bar=document.getElementById('progressBar');
+const actions=document.getElementById('actions');
+const platforms=document.querySelectorAll('.platform');
+
+let imgData=null,sx=0,sy=0,ex=0,ey=0,drag=false,platform=null;
+
+platforms.forEach(p=>{
+  p.onclick=()=>{
+    platforms.forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    platform=p.dataset.platform;
+  };
+});
+
+fileInput.onchange=e=>{
+  bar.style.width='30%';
+  const file=e.target.files[0];
+  const img=new Image();
+  img.onload=()=>{
+    canvas.width=img.width;
+    canvas.height=img.height;
+    ctx.drawImage(img,0,0);
+    imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+    bar.style.width='100%';
+    setTimeout(()=>bar.style.width='0%',800);
+    actions.style.display='flex';
+  };
+  img.src=URL.createObjectURL(file);
+};
+
+canvas.onmousedown=e=>{
+  sx=e.offsetX; sy=e.offsetY; drag=true;
+};
+canvas.onmousemove=e=>{
+  if(!drag||!imgData) return;
+  ex=e.offsetX; ey=e.offsetY;
+  ctx.putImageData(imgData,0,0);
+  ctx.strokeStyle='red';
+  ctx.lineWidth=2;
+  ctx.strokeRect(sx,sy,ex-sx,ey-sy);
+};
+canvas.onmouseup=()=>drag=false;
+
+function autoCrop(){
+  if(!imgData||!platform){alert('Select platform first');return;}
+  sx=40; sy=40; ex=canvas.width-40; ey=canvas.height-40;
+  ctx.putImageData(imgData,0,0);
+  ctx.strokeStyle='green';
+  ctx.lineWidth=3;
+  ctx.strokeRect(sx,sy,ex-sx,ey-sy);
+}
+
+function downloadCrop(){
+  if(!ex){alert('Crop first');return;}
+  const w=ex-sx,h=ey-sy;
+  const c=document.createElement('canvas');
+  c.width=w; c.height=h;
+  c.getContext('2d').drawImage(canvas,sx,sy,w,h,0,0,w,h);
+  const a=document.createElement('a');
+  a.download=(platform||'invoice')+'-crop.png';
+  a.href=c.toDataURL();
+  a.click();
+}
+</script>
+
+</body>
+</html>
